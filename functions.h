@@ -11,9 +11,18 @@ typedef struct {
     pthread_mutex_t lock;  // Mutex para sincronização
 } Celula;
 
+// Definição da estrutura para passar argumentos para as threads
+typedef struct {
+    int x;
+    int y;
+} ThreadArgs;
 
 // Declaração da matriz de floresta
 extern Celula floresta[SIZE][SIZE];
+
+// Declaração da direção do vento
+extern int wind_dx;
+extern int wind_dy;
 
 // Funções
 void inicializar_floresta();
@@ -23,5 +32,5 @@ void* gerar_incendios(void* arg);
 void* central_thread(void* arg);
 void comunicar_incendio(int x, int y);
 void gerenciar_incendios();
-
-#endif
+void* combate_thread(void* arg);
+#endif // FUNCTIONS_H

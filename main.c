@@ -4,31 +4,30 @@
 #include <unistd.h>
 #include "functions.h"
 
-#define NUM_THREADS 10  // Número fixo de threads de sensores
-
-typedef struct {
-    int id;
-    int num_threads;
-} ThreadArgs;
-
-void* sensor_thread(void* arg);  // Declaração da função sensor_thread
+#define SIZE 30
 
 int main() {
     // Inicializa a floresta
     inicializar_floresta();
     imprimir_floresta();
 
-    // Cria um número fixo de threads de sensores
-    pthread_t sensores[NUM_THREADS];
-    for (int i = 0; i < NUM_THREADS; i++) {
-        ThreadArgs* args = malloc(sizeof(ThreadArgs));
-        args->id = i;
-        args->num_threads = NUM_THREADS;
-        if (pthread_create(&sensores[i], NULL, sensor_thread, args) != 0) {
-            perror("Failed to create sensor thread");
-            return 1;
+    // Cria threads para os sensores nas posições com 'T'
+    pthread_t sensores[SIZE * SIZE];
+    int thread_count = 0;
+    for (int i = 0; i < SIZE; i++) {
+        for (int j = 0; j < SIZE; j++) {
+            if (floresta[i][j].estado == 'T') {
+                ThreadArgs* args = malloc(sizeof(ThreadArgs));
+                args->x = i;
+                args->y = j;
+                if (pthread_create(&sensores[thread_count], NULL, sensor_thread, args) != 0) {
+                    perror("Failed to create sensor thread");
+                    return 1;
+                }
+                printf("Sensor thread created for position [%d, %d]\n", i, j);
+                thread_count++;
+            }
         }
-        printf("Sensor thread %d created\n", i);
     }
 
     // Cria a thread para gerar incêndios
@@ -47,12 +46,21 @@ int main() {
     }
     printf("Central thread created\n");
 
-    // Aguarda a conclusão das threads (neste caso, elas nunca terminam)
-    for (int i = 0; i < NUM_THREADS; i++) {
+    // Cria a thread para propagar o combate aos incêndios
+    pthread_t thread_combate;
+    if (pthread_create(&thread_combate, NULL, combate_thread, NULL) != 0) {
+        perror("Failed to create combat propagation thread");
+        return 1;
+    }
+    printf("Combat propagation thread created\n");
+
+    // Aguarda a conclusão das threads de sensores (neste caso, elas nunca terminam)
+    for (int i = 0; i < thread_count; i++) {
         pthread_join(sensores[i], NULL);
     }
     pthread_join(thread_incendios, NULL);
     pthread_join(thread_central, NULL);
+    pthread_join(thread_combate, NULL);
 
     return 0;
 }
